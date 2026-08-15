@@ -25,38 +25,36 @@ export NGINX_SERVER_SCHEME="https"
 export RAILS_TRUSTED_PROXIES="127.0.0.1,::1"
 export ZAMMAD_FQDN="${DOMAIN}"
 export ZAMMAD_HTTP_TYPE="https"
+export ZAMMAD_RAILSSERVER_HOST=127.0.0.1
+export ZAMMAD_RAILSSERVER_PORT=3000
+export ZAMMAD_WEBSOCKET_HOST=127.0.0.1
+export ZAMMAD_WEBSOCKET_PORT=6042
 export ELASTICSEARCH_ENABLED=false
+
+# Persistent storage link
+mkdir -p /app/data/storage
+[ -L /opt/zammad/storage ] || rm -rf /opt/zammad/storage && ln -s /app/data/storage /opt/zammad/storage
 
 cd /opt/zammad
 
-# First boot: create database, run migrations, seed
+# First boot: init Zammad (create DB, migrate, seed, configure FQDN)
 if [ ! -f /app/data/.initialized ]; then
     echo "First boot: initialising Zammad database..."
 
-    # Wait for postgres
+    # Wait for postgres to be ready
     until pg_isready -q -h "$DB_HOST" -p "$DB_PORT"; do
         echo "  waiting for postgresql..."
         sleep 2
     done
 
-    # Create DB if needed
-    bundle exec rake db:create 2>&1 || echo "DB may already exist"
+    # Run zammad-init (handles DB creation, migrations, seeds)
+    /opt/zammad/bin/docker-entrypoint zammad-init
 
-    # Run migrations
-    bundle exec rake db:migrate 2>&1
-
-    # Seed
-    bundle exec rake db:seed 2>&1
-
-    # Generate FQDN config
-    bundle exec rails r "Setting.set('fqdn', '${DOMAIN}')" 2>&1
+    # Set FQDN
+    bundle exec rails r "Setting.set('fqdn', '${DOMAIN}')" 2>&1 || true
 
     touch /app/data/.initialized
 fi
 
-# Ensure storage dir exists for persistent data
-mkdir -p /app/data/storage
-[ -L /opt/zammad/storage ] || rm -rf /opt/zammad/storage && ln -s /app/data/storage /opt/zammad/storage
-
-# Run supervisord
+# Run supervisord (memcached + zammad services)
 exec /usr/bin/supervisord --configuration /etc/supervisor/supervisord.conf -n
