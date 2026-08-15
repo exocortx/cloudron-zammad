@@ -43,7 +43,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png"
         ],
-        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.1.0",
+        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.1.0-3ceb859",
         "packagerName": "exocortx",
         "packagerUrl": "https://github.com/exocortx/cloudron-zammad"
       }
