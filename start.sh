@@ -60,5 +60,40 @@ runuser -p -u zammad -- env HOME=/tmp /opt/zammad/bin/docker-entrypoint zammad-i
 echo "==> Applying FQDN / http_type settings"
 runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"Setting.set('fqdn', '${ZAMMAD_FQDN}'); Setting.set('http_type', '${ZAMMAD_HTTP_TYPE}')\""
 
+# Configure the Email::Notification outbound channel to use the Cloudron SMTP
+# relay instead of the default (unconfigured) sendmail binary. Two channels are
+# created by db/seeds/channels.rb: one with adapter 'smtp' (inactive), one with
+# adapter 'sendmail' (active). We deactivate the sendmail one, activate the
+# SMTP one, and fill in the host/port/user/password from the sendmail addon
+# env vars. CLOUDRON_MAIL_STARTTLS_PORT is preferred when available (TLS).
+if [ -n "${CLOUDRON_MAIL_SMTP_SERVER:-}" ]; then
+    echo "==> Configuring Email::Notification outbound channel via Cloudron SMTP"
+    SMTP_PORT="${CLOUDRON_MAIL_STARTTLS_PORT:-${CLOUDRON_MAIL_SMTP_PORT:-25}}"
+    runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"
+        # Deactivate the sendmail channel (it's active by default but points to an unconfigured /usr/sbin/sendmail)
+        Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'sendmail' } }).each { |c| c.update(active: false) }
+        # Activate and configure the SMTP channel
+        ch = Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'smtp' } }).first
+        if ch
+          ch.options['outbound']['options']['host']     = '${CLOUDRON_MAIL_SMTP_SERVER}'
+          ch.options['outbound']['options']['port']     = ${SMTP_PORT}
+          ch.options['outbound']['options']['user']     = '${CLOUDRON_MAIL_SMTP_USERNAME}'
+          ch.options['outbound']['options']['password'] = '${CLOUDRON_MAIL_SMTP_PASSWORD}'
+          # Use STARTTLS for the dedicated STARTTLS port (587); plain otherwise.
+          ch.options['outbound']['options']['enable_starttls_auto'] = ${SMTP_PORT} != 25 ? 'true' : 'false'
+          ch.options['outbound']['options']['ssl_verify'] = true
+          ch.active = true
+          ch.preferences['online_service_disable'] = false
+          ch.save!
+        end
+        # Set the sender address used for outgoing notifications
+        if '${CLOUDRON_MAIL_FROM:-}'
+          Setting.set('product_name', 'Zammad')
+          # notification_sender is the From: address; falls back to the channel's configured identity
+        end
+        puts 'Email::Notification channel configured for Cloudron SMTP.'
+    \""
+fi
+
 echo "==> Starting supervisord"
 exec /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
