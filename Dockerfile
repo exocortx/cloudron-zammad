@@ -3,11 +3,15 @@ FROM zammad/zammad:7.1.2-0013
 
 USER root
 
-# Install memcached + supervisord for running server processes in one container
+# Install memcached + supervisord + socat for running server processes in one container
+# socat is used as a localhost→postgres TCP forwarder so Zammad connects via 127.0.0.1
+# (which PostgreSQL always authorises in pg_hba.conf), avoiding the IPv6/IPv4 source IP
+# matching issues with the Cloudron PostgreSQL addon over the docker bridge.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         memcached \
         supervisor \
         curl \
+        socat \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure supervisord to run railsserver, websocket, scheduler, memcached, nginx
