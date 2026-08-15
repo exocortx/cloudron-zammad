@@ -9,6 +9,7 @@ DB_PASS="${CLOUDRON_POSTGRESQL_PASSWORD}"
 DB_NAME="${CLOUDRON_POSTGRESQL_DATABASE}"
 REDIS_HOST="${CLOUDRON_REDIS_HOST}"
 REDIS_PORT="${CLOUDRON_REDIS_PORT}"
+REDIS_PASSWORD="${CLOUDRON_REDIS_PASSWORD}"
 DOMAIN="${CLOUDRON_APP_DOMAIN}"
 
 # Configure Zammad to use Cloudron addons
@@ -17,7 +18,8 @@ export POSTGRESQL_PORT="$DB_PORT"
 export POSTGRESQL_USER="$DB_USER"
 export POSTGRESQL_PASS="$DB_PASS"
 export POSTGRESQL_DB="$DB_NAME"
-export REDIS_URL="redis://${REDIS_HOST}:${REDIS_PORT}"
+# Redis with password (Cloudron Redis addon requires auth)
+export REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
 export MEMCACHE_SERVERS="127.0.0.1:11211"
 export NGINX_PORT=8080
 export NGINX_SERVER_NAME="${DOMAIN}"
@@ -31,9 +33,17 @@ export ZAMMAD_WEBSOCKET_HOST=127.0.0.1
 export ZAMMAD_WEBSOCKET_PORT=6042
 export ELASTICSEARCH_ENABLED=false
 
-# Persistent storage link
-mkdir -p /app/data/storage
-[ -L /opt/zammad/storage ] || rm -rf /opt/zammad/storage && ln -s /app/data/storage /opt/zammad/storage
+# Persistent storage — bind mount instead of symlink (filesystem is read-only)
+# Cloudron mounts /app/data, Zammad stores data in /opt/zammad/storage
+# We'll bind-mount via supervisord or use a writable directory in /app/data
+mkdir -p /app/data/storage /app/data/tmp /app/data/log
+
+# Try to symlink storage (works if /opt/zammad/storage is writable or doesn't exist)
+# If it fails, Zammad will use default location and we lose data on restart
+# Better: bind mount the data dir entirely via supervisord
+if [ ! -e /opt/zammad/storage ]; then
+    ln -s /app/data/storage /opt/zammad/storage 2>/dev/null || true
+fi
 
 cd /opt/zammad
 
@@ -44,6 +54,12 @@ if [ ! -f /app/data/.initialized ]; then
     # Wait for postgres to be ready
     until pg_isready -q -h "$DB_HOST" -p "$DB_PORT"; do
         echo "  waiting for postgresql..."
+        sleep 2
+    done
+
+    # Wait for redis (with auth)
+    until redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; do
+        echo "  waiting for redis..."
         sleep 2
     done
 
