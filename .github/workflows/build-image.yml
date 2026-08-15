@@ -43,17 +43,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update CloudronVersions.json with new image tag
+      - name: Update CloudronVersions.json with version-only tag
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          IMAGE_TAG="${{ steps.version.outputs.version }}-${SHORT_SHA}"
-          jq --arg tag "$IMAGE_TAG" \
+          jq --arg tag "${{ steps.version.outputs.version }}" \
              '.versions["${{ steps.version.outputs.version }}"].manifest.dockerImage = "ghcr.io/exocortx/cloudron-zammad:" + $tag' \
              CloudronVersions.json > CloudronVersions.json.new
           mv CloudronVersions.json.new CloudronVersions.json
           cat CloudronVersions.json
 
-      - name: Make image public (so Cloudron can pull without auth)
+      - name: Make image public
         run: |
           RESPONSE=$(curl -s -X PATCH \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -61,17 +59,13 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/user/packages/container/cloudron-zammad \
             -d '{"visibility":"public"}')
-          echo "Visibility change response: $RESPONSE"
-          VISIBILITY=$(echo "$RESPONSE" | jq -r '.visibility // "unknown"')
-          echo "Image visibility is now: $VISIBILITY"
-          if [ "$VISIBILITY" != "public" ]; then
-            echo "::warning::Image is $VISIBILITY, Cloudron may not be able to pull it"
-          fi
+          echo "Visibility: $RESPONSE"
 
       - name: Commit updated CloudronVersions.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CloudronVersions.json
-          git commit -m "ci: update dockerImage tag to ${{ steps.version.outputs.version }}-${SHORT_SHA}" || echo "No changes"
+          git commit -m "ci: pin dockerImage to :${{ steps.version.outputs.version }}" || echo "No changes"
+          git pull --rebase origin main || true
           git push
