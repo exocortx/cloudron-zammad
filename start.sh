@@ -36,7 +36,13 @@ export REDIS_URL="${CLOUDRON_REDIS_URL}"
 # Elasticsearch is not packaged as a Cloudron addon. Leave it disabled; the
 # user can configure an external Elasticsearch instance from Zammad's admin
 # panel (Settings > Search Index) if desired. PostgreSQL FTS is used by default.
-export ELASTICSEARCH_ENABLED=false
+# Elasticsearch is enabled only if CLOUDRON_ELASTICSEARCH_URL is configured
+# (Cloudron has no native ES addon). When unset, Zammad uses PostgreSQL FTS.
+if [ -n "${CLOUDRON_ELASTICSEARCH_URL:-}" ]; then
+    export ELASTICSEARCH_ENABLED=true
+else
+    export ELASTICSEARCH_ENABLED=false
+fi
 
 # Avoid writing to the (read-only) log/ directory; ship logs to stdout instead.
 export RAILS_LOG_TO_STDOUT=true
@@ -62,6 +68,27 @@ runuser -p -u zammad -- env HOME=/tmp /opt/zammad/bin/docker-entrypoint zammad-i
 echo "==> Applying FQDN / http_type settings"
 runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"Setting.set('fqdn', '${ZAMMAD_FQDN}'); Setting.set('http_type', '${ZAMMAD_HTTP_TYPE}')\""
 
+# Configure Elasticsearch if the env vars are set. Cloudron does not ship an
+# ES addon, so we expose three manual env vars: CLOUDRON_ELASTICSEARCH_URL,
+# _USER, _PASSWORD. The user customises them by editing the env block of the
+# Cloudron app's location (the `env:` key in the manifest). If the env vars
+# are absent, Zammad's defaults are left alone (PostgreSQL FTS is used).
+if [ -n "${CLOUDRON_ELASTICSEARCH_URL:-}" ]; then
+    echo "==> Configuring Elasticsearch backend via Cloudron env vars"
+    runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"
+        Setting.set('es_url', '${CLOUDRON_ELASTICSEARCH_URL}')
+        Setting.set('es_user', '${CLOUDRON_ELASTICSEARCH_USER:-elastic}')
+        Setting.set('es_password', '${CLOUDRON_ELASTICSEARCH_PASSWORD:-}')
+        Setting.set('es_index', 'zammad')
+        Setting.set('es_ssl_verify', false)
+        Setting.set('search_index', 'SearchIndex::Elasticsearch')
+        puts 'Elasticsearch config: ' + Setting.get('es_url').to_s
+    \""
+    echo "==> Reindexing Zammad into Elasticsearch (one-time, may take a while)"
+    runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r 'SearchIndexJob.perform_later(true)'" || \
+        echo 'WARNING: SearchIndexJob enqueue failed; trigger reindex manually from Zammad admin panel'
+fi
+
 # Configure the Email::Notification outbound channel to use the Cloudron SMTP
 # relay instead of the default (unconfigured) sendmail binary. Two channels are
 # created by db/seeds/channels.rb: one with adapter 'smtp' (inactive), one with
@@ -82,9 +109,35 @@ if [ -n "${CLOUDRON_MAIL_SMTP_SERVER:-}" ]; then
     runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"
         # Deactivate the sendmail channel (it's active by default but points to an unconfigured /usr/sbin/sendmail)
         Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'sendmail' } }).each { |c| c.update(active: false) }
-        # Activate and configure the SMTP channel (one created by db/seeds/channels.rb)
+        # Find or create the SMTP channel. db/seeds/channels.rb creates one on
+        # fresh installs, but on an upgrade over an existing DB the channel may
+        # not exist (especially if the user already created a custom sendmail
+        # channel from the UI). Create it in that case so we never end up with
+        # the broken sendmail channel as the only outbound option.
         ch = Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'smtp' } }).first
-        if ch
+        if ch.nil?
+          ch = Channel.create!(
+            area: 'Email::Notification',
+            type: 'email',
+            options: {
+              outbound: {
+                adapter: 'smtp',
+                options: {
+                  host: '${CLOUDRON_MAIL_SMTP_SERVER}',
+                  port: ${SMTP_PORT},
+                  user: '${CLOUDRON_MAIL_SMTP_USERNAME}',
+                  password: '${CLOUDRON_MAIL_SMTP_PASSWORD}',
+                  enable_starttls_auto: ${STARTTLS},
+                  ssl_verify: true,
+                },
+              },
+              inbound: {},
+            },
+            active: true,
+            preferences: { online_service_disable: false },
+          )
+          puts 'Email::Notification SMTP channel created: ' + ch.options['outbound']['options']['host'].to_s + ':' + ch.options['outbound']['options']['port'].to_s
+        else
           ch.options['outbound']['options']['host']     = '${CLOUDRON_MAIL_SMTP_SERVER}'
           ch.options['outbound']['options']['port']     = ${SMTP_PORT}
           ch.options['outbound']['options']['user']     = '${CLOUDRON_MAIL_SMTP_USERNAME}'
@@ -94,9 +147,7 @@ if [ -n "${CLOUDRON_MAIL_SMTP_SERVER:-}" ]; then
           ch.active = true
           ch.preferences['online_service_disable'] = false
           ch.save!
-          puts 'Email::Notification SMTP channel configured: ' + ch.options['outbound']['options']['host'].to_s + ':' + ch.options['outbound']['options']['port'].to_s
-        else
-          puts 'WARNING: no SMTP Email::Notification channel found; outbound email will not work'
+          puts 'Email::Notification SMTP channel updated: ' + ch.options['outbound']['options']['host'].to_s + ':' + ch.options['outbound']['options']['port'].to_s
         end
     \""
 fi
