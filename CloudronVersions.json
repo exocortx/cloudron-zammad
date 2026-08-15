@@ -15,7 +15,7 @@
         "changelog": "* Initial release of Zammad 7.1.2 for Cloudron\n* Multi-channel support (email, web, chat, social)\n* PostgreSQL 16 via Cloudron addon\n* Redis 7 via Cloudron addon\n* Memcached bundled for session/cache\n* Elasticsearch disabled (PostgreSQL FTS used)\n",
         "version": "0.1.0",
         "website": "https://zammad.org",
-        "packageUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
+        "packageUrl": "https://github.com/exocortx/cloudron-zammad",
         "contactEmail": "contact@zammad.org",
         "icon": "file://icon.png",
         "tags": [
@@ -39,11 +39,11 @@
           "localstorage": {}
         },
         "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account. SMTP and other integrations can be configured from the admin panel after first login.",
-        "iconUrl": "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png",
         "mediaLinks": [
-          "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png"
+          "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png"
         ],
-        "dockerImage": "ghcr.io/arkad-agency/cloudron-zammad:0.1.0-22d3bb8"
+        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.1.0-pending"
       }
     }
   }
