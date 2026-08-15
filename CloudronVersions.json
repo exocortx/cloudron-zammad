@@ -7,45 +7,39 @@
       "publishState": "published",
       "manifest": {
         "id": "org.zammad.cloudronapp",
-        "manifestVersion": 2,
         "title": "Zammad Helpdesk",
-        "tagline": "Open-source ticketing and customer support platform",
         "author": "Zammad Foundation",
-        "description": "Zammad is a web-based, open-source helpdesk/customer support system written in Ruby on Rails.\n\nWith Zammad, you can manage customer requests via:\n\n- A modern web interface\n- Email integration (incoming/outgoing)\n- Social media (Facebook, Twitter, Telegram)\n- Chat\n- Telephony integrations\n- REST API\n\nFeatures:\n- Multi-channel: email, web form, chat, phone, social\n- Ticket management with SLA tracking\n- Knowledge base\n- Multi-tenant capable\n- Reporting and dashboards\n- Extensible via API and integrations\n- Fully self-hosted (no SaaS dependency)\n- AGPL-3.0 licence\n\nThis Cloudron package bundles Zammad with PostgreSQL (via Cloudron addon), Redis (via Cloudron addon), and Memcached (bundled locally). Elasticsearch is disabled by default for simplicity; full-text search uses PostgreSQL FTS.",
-        "changelog": "* Initial release of Zammad 7.1.2 for Cloudron\n* Multi-channel support (email, web, chat, social)\n* PostgreSQL 16 via Cloudron addon\n* Redis 7 via Cloudron addon\n* Memcached bundled for session/cache\n* Elasticsearch disabled (PostgreSQL FTS used)\n",
+        "description": "Hermes Agent is a self-improving AI assistant by Nous Research. It features a built-in learning loop that creates and refines skills, searches past conversations, and builds user profiles across sessions.\n\n**Key Features:**\n- Multi-platform messaging: Telegram, Discord, Slack, WhatsApp, Signal, Matrix, Email, and more\n- OpenAI-compatible API server for integration with Open WebUI, LobeChat, LibreChat, etc.\n- Flexible LLM support: OpenRouter, OpenAI, Anthropic, xAI/Grok, and custom endpoints\n- Procedural memory with autonomous skill creation\n- Built-in cron scheduler for unattended tasks\n- Parallel subagent processing\n- Optional Nextcloud/WebDAV sync, Tailscale private networking, Bitwarden CLI, Cloudron CLI, local browser vision, xAI X search, Perplexity, and Vane search support in the Cloudron package\n",
+        "tagline": "Self-improving AI agent with multi-platform messaging gateway",
         "version": "0.1.0",
+        "healthCheckPath": "/health",
+        "httpPort": 8080,
+        "memoryLimit": 4294967296,
+        "addons": {
+          "localstorage": {},
+          "sendmail": {},
+          "recvmail": {}
+        },
+        "manifestVersion": 2,
         "website": "https://github.com/exocortx/cloudron-zammad",
-        "packageUrl": "https://github.com/exocortx/cloudron-zammad",
-        "contactEmail": "contact@zammad.org",
+        "contactEmail": "contact@jeanservais.com",
         "icon": "file://icon.png",
         "tags": [
-          "helpdesk",
-          "ticketing",
-          "customer-support",
-          "zammad"
+          "helpdesk"
         ],
-        "httpPort": 8080,
-        "healthCheckPath": "/api/v1/users",
-        "memoryLimit": 4294967296,
-        "minBoxVersion": "8.0.0",
-        "upstreamVersion": "7.1.2",
-        "addons": {
-          "postgresql": {
-            "version": "16"
-          },
-          "redis": {
-            "version": "7.0"
-          },
-          "localstorage": {}
-        },
-        "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account. SMTP and other integrations can be configured from the admin panel after first login.",
-        "iconUrl": "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png",
-        "mediaLinks": [
-          "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png"
-        ],
-        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.1.0-bf6e321",
+        "minBoxVersion": "9.1.0",
+        "postInstallMessage": "Zammad is ready (test).",
+        "configurePath": "/",
+        "documentationUrl": "https://github.com/exocortx/cloudron-zammad#readme",
+        "iconUrl": "https://git.due.ren/andreas/hermes-cloudron/-/raw/main/icon.png",
         "packagerName": "exocortx",
-        "packagerUrl": "https://github.com/exocortx/cloudron-zammad"
+        "packagerUrl": "https://github.com/exocortx/cloudron-zammad",
+        "changelog": "* Initial release of Zammad for Cloudron (test with Hermes payload)",
+        "mediaLinks": [
+          "https://raw.githubusercontent.com/nousresearch/hermes-agent/v2026.4.23/assets/banner.png"
+        ],
+        "upstreamVersion": "7.1.2",
+        "dockerImage": "andreasdueren/hermes-agent-cloudron:0.4.75"
       }
     }
   }
