@@ -57,11 +57,12 @@ if [ ! -f /app/data/.initialized ]; then
         sleep 2
     done
 
-    # Wait for redis (with auth)
-    until redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" --no-auth-warning ping 2>/dev/null | grep -q PONG; do
-        echo "  waiting for redis..."
+    # Wait for redis (TCP connectivity check; auth handled by REDIS_URL env var)
+    echo "  waiting for redis..."
+    until (echo > /dev/tcp/"$REDIS_HOST"/"$REDIS_PORT") 2>/dev/null; do
         sleep 2
     done
+    echo "  redis is reachable"
 
     # Run zammad-init (handles DB creation, migrations, seeds)
     /opt/zammad/bin/docker-entrypoint zammad-init
