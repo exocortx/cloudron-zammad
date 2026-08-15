@@ -2,12 +2,14 @@
 set -e
 
 # Cloudron env vars
-DB_HOST="${CLOUDRON_POSTGRESQL_HOST}"
+# Resolve PostgreSQL/Redis hostnames to IPv4 — Cloudron DNS may return IPv6 first,
+# but the addon services only accept IPv4 (pg_hba.conf / Redis listen on IPv4 only).
+DB_HOST=$(getent ahostsv4 "${CLOUDRON_POSTGRESQL_HOST}" | awk 'NR==1{print $1}')
 DB_PORT="${CLOUDRON_POSTGRESQL_PORT}"
 DB_USER="${CLOUDRON_POSTGRESQL_USERNAME}"
 DB_PASS="${CLOUDRON_POSTGRESQL_PASSWORD}"
 DB_NAME="${CLOUDRON_POSTGRESQL_DATABASE}"
-REDIS_HOST="${CLOUDRON_REDIS_HOST}"
+REDIS_HOST=$(getent ahostsv4 "${CLOUDRON_REDIS_HOST}" | awk 'NR==1{print $1}')
 REDIS_PORT="${CLOUDRON_REDIS_PORT}"
 REDIS_PASSWORD="${CLOUDRON_REDIS_PASSWORD}"
 DOMAIN="${CLOUDRON_APP_DOMAIN}"
