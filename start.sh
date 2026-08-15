@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-# Cloudron env vars
-# Resolve PostgreSQL/Redis hostnames to IPv4 — Cloudron DNS may return IPv6 first,
-# but the addon services only accept IPv4 (pg_hba.conf / Redis listen on IPv4 only).
-DB_HOST=$(getent ahostsv4 "${CLOUDRON_POSTGRESQL_HOST}" | awk 'NR==1{print $1}')
+# Cloudron env vars — use the hostname directly, NOT resolved IPs.
+# Cloudron DNS resolves "postgresql" / "redis" to the addon container's IPv4,
+# and pg_hba.conf accepts those container IPs. Resolving in bash and passing
+# the IP directly caused pg to connect from a different source IP that was
+# not authorised in pg_hba.conf.
+DB_HOST="${CLOUDRON_POSTGRESQL_HOST}"
 DB_PORT="${CLOUDRON_POSTGRESQL_PORT}"
 DB_USER="${CLOUDRON_POSTGRESQL_USERNAME}"
 DB_PASS="${CLOUDRON_POSTGRESQL_PASSWORD}"
 DB_NAME="${CLOUDRON_POSTGRESQL_DATABASE}"
-REDIS_HOST=$(getent ahostsv4 "${CLOUDRON_REDIS_HOST}" | awk 'NR==1{print $1}')
+REDIS_HOST="${CLOUDRON_REDIS_HOST}"
 REDIS_PORT="${CLOUDRON_REDIS_PORT}"
 REDIS_PASSWORD="${CLOUDRON_REDIS_PASSWORD}"
 DOMAIN="${CLOUDRON_APP_DOMAIN}"
@@ -20,6 +22,9 @@ export POSTGRESQL_PORT="$DB_PORT"
 export POSTGRESQL_USER="$DB_USER"
 export POSTGRESQL_PASS="$DB_PASS"
 export POSTGRESQL_DB="$DB_NAME"
+# SSL is not required for Cloudron PostgreSQL addon — pg_hba.conf allows plain IPv4
+# from the docker bridge. Disable SSL explicitly to avoid TLS handshake failures.
+export PGSSLMODE="disable"
 # Redis with password (Cloudron Redis addon requires auth)
 export REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
 export MEMCACHE_SERVERS="127.0.0.1:11211"
@@ -37,12 +42,8 @@ export ELASTICSEARCH_ENABLED=false
 
 # Persistent storage — bind mount instead of symlink (filesystem is read-only)
 # Cloudron mounts /app/data, Zammad stores data in /opt/zammad/storage
-# We'll bind-mount via supervisord or use a writable directory in /app/data
 mkdir -p /app/data/storage /app/data/tmp /app/data/log
 
-# Try to symlink storage (works if /opt/zammad/storage is writable or doesn't exist)
-# If it fails, Zammad will use default location and we lose data on restart
-# Better: bind mount the data dir entirely via supervisord
 if [ ! -e /opt/zammad/storage ]; then
     ln -s /app/data/storage /opt/zammad/storage 2>/dev/null || true
 fi
