@@ -47,7 +47,7 @@
           "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/dashboard.png"
         ],
         "upstreamVersion": "7.1.2",
-        "dockerImage": "ghcr.io/Arkad-Agency/cloudron-zammad:0.3.1"
+        "dockerImage": "ghcr.io/arkad-agency/cloudron-zammad:0.3.1"
       }
     }
   }
