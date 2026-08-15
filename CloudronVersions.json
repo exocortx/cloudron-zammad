@@ -42,7 +42,8 @@
         "iconUrl": "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png",
         "mediaLinks": [
           "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png"
-        ]
+        ],
+        "dockerImage": "ghcr.io/arkad-agency/cloudron-zammad:0.1.0-f5f7cb8"
       }
     }
   }
