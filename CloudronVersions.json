@@ -1,0 +1,41 @@
+{
+  "stable": true,
+  "versions": {
+    "0.1.0": {
+      "creationDate": "Fri, 15 Aug 2026 12:00:00 GMT",
+      "ts": "Fri, 15 Aug 2026 12:00:00 GMT",
+      "publishState": "published",
+      "manifest": {
+        "id": "org.zammad.cloudronapp",
+        "title": "Zammad Helpdesk",
+        "author": "Zammad Foundation",
+        "description": "file://DESCRIPTION.md",
+        "tagline": "Open-source ticketing & customer support platform",
+        "version": "0.1.0",
+        "website": "https://zammad.org",
+        "packageUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
+        "contactEmail": "contact@zammad.org",
+        "icon": "file://icon.png",
+        "iconUrl": "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png",
+        "documentationUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
+        "packagerName": "ExocortX",
+        "packagerUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
+        "minBoxVersion": "8.0.0",
+        "manifestVersion": 2,
+        "healthCheckPath": "/api/v1/users",
+        "httpPort": 8080,
+        "memoryLimit": 4294967296,
+        "upstreamVersion": "7.1.2",
+        "addons": {
+          "postgresql": {
+            "version": "16"
+          },
+          "redis": {
+            "version": "7.0"
+          },
+          "localstorage": {}
+        }
+      }
+    }
+  }
+}

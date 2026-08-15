@@ -1,0 +1,7 @@
+0.1.0 (2026-08-15)
+  - Initial release
+  - Zammad 7.1.2
+  - Bundled memcached for session/cache
+  - PostgreSQL 16 via Cloudron addon
+  - Redis 7 via Cloudron addon
+  - Elasticsearch disabled (PostgreSQL FTS used instead)
