@@ -9,7 +9,7 @@
         "id": "org.zammad.cloudronapp",
         "title": "Zammad Helpdesk",
         "author": "Zammad Foundation",
-        "description": "Zammad is a web-based, open-source helpdesk/customer support system written in Ruby on Rails.\n\nWith Zammad, you can manage customer requests via:\n\n- A modern web interface\n- Email integration (incoming/outgoing)\n- Social media (Facebook, Twitter, Telegram)\n- Chat\n- Telephony integrations\n- REST API\n\nFeatures:\n- Multi-channel: email, web form, chat, phone, social\n- Ticket management with SLA tracking\n- Knowledge base\n- Multi-tenant capable\n- Reporting and dashboards\n- Extensible via API and integrations\n- Fully self-hosted (no SaaS dependency)\n- AGPL-3.0 licence\n\nThis Cloudron package bundles Zammad with PostgreSQL (via Cloudron addon), Redis (via Cloudron addon), and Memcached (bundled locally). Elasticsearch is disabled by default for simplicity; full-text search uses PostgreSQL FTS.",
+        "description": "![Zammad Logo](https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/logo.png)\n\nZammad is a web-based, open-source helpdesk/customer support system written in Ruby on Rails.\n\nWith Zammad, you can manage customer requests via:\n\n- A modern web interface\n- Email integration (incoming/outgoing)\n- Social media (Facebook, Twitter, Telegram)\n- Chat\n- Telephony integrations\n- REST API\n\nFeatures:\n- Multi-channel: email, web form, chat, phone, social\n- Ticket management with SLA tracking\n- Knowledge base\n- Multi-tenant capable\n- Reporting and dashboards\n- Extensible via API and integrations\n- Fully self-hosted (no SaaS dependency)\n- AGPL-3.0 licence\n\n![Zammad Dashboard](https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/dashboard.png)\n\nThis Cloudron package bundles Zammad with PostgreSQL (via Cloudron addon), Redis (via Cloudron addon), and Memcached (bundled locally). Elasticsearch is disabled by default for simplicity; full-text search uses PostgreSQL FTS.",
         "tagline": "Open-source ticketing and customer support platform",
         "version": "0.1.0",
         "healthCheckPath": "/api/v1/users",
@@ -43,7 +43,8 @@
         "packagerUrl": "https://github.com/exocortx/cloudron-zammad",
         "changelog": "* Initial release of Zammad 7.1.2 for Cloudron\n* Multi-channel support (email, web, chat, social)\n* PostgreSQL 16 via Cloudron addon\n* Redis 7 via Cloudron addon\n* Memcached bundled for session/cache\n* Elasticsearch disabled (PostgreSQL FTS used)",
         "mediaLinks": [
-          "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png"
+          "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/logo.png",
+          "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/dashboard.png"
         ],
         "upstreamVersion": "7.1.2",
         "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.1.0"
