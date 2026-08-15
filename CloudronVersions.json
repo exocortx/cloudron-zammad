@@ -1,17 +1,17 @@
 {
   "stable": true,
   "versions": {
-    "0.2.0": {
-      "creationDate": "Sat, 16 Aug 2026 12:00:00 GMT",
-      "ts": "Sat, 16 Aug 2026 12:00:00 GMT",
+    "0.3.0": {
+      "creationDate": "Sat, 16 Aug 2026 18:00:00 GMT",
+      "ts": "Sat, 16 Aug 2026 18:00:00 GMT",
       "publishState": "published",
       "manifest": {
         "id": "org.zammad.cloudronapp",
         "title": "Zammad Helpdesk",
         "author": "Zammad Foundation",
-        "description": "Zammad is a web-based, open-source helpdesk/customer support system written in Ruby on Rails.\n\nWith Zammad, you can manage customer requests via:\n\n- A modern web interface\n- Email integration (incoming/outgoing)\n- Social media (Facebook, Twitter, Telegram)\n- Chat\n- Telephony integrations\n- REST API\n\n**Features:**\n\n- Multi-channel: email, web form, chat, phone, social\n- Ticket management with SLA tracking\n- Knowledge base\n- Multi-tenant capable\n- Reporting and dashboards\n- Extensible via API and integrations\n- Fully self-hosted (no SaaS dependency)\n- AGPL-3.0 licence\n\nThis Cloudron package bundles Zammad with PostgreSQL (via Cloudron addon), Redis (via Cloudron addon), and Memcached (bundled locally). Elasticsearch is disabled by default for simplicity; full-text search uses PostgreSQL FTS.",
+        "description": "Zammad is a web-based, open-source helpdesk/customer support system written in Ruby on Rails.\n\nWith Zammad, you can manage customer requests via:\n\n- A modern web interface\n- Email integration (incoming/outgoing)\n- Social media (Facebook, Twitter, Telegram)\n- Chat\n- Telephony integrations\n- REST API\n\n**Features:**\n\n- Multi-channel: email, web form, chat, phone, social\n- Ticket management with SLA tracking\n- Knowledge base\n- Multi-tenant capable\n- Reporting and dashboards\n- Extensible via API and integrations\n- Fully self-hosted (no SaaS dependency)\n- AGPL-3.0 licence\n\nThis Cloudron package bundles Zammad with PostgreSQL (via Cloudron addon), Redis (via Cloudron addon), and Memcached (bundled locally). Elasticsearch is disabled by default; full-text search uses PostgreSQL FTS. Outbound email notifications are auto-configured via the Cloudron sendmail addon (SMTP relay).",
         "tagline": "Open-source ticketing and customer support platform",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "healthCheckPath": "/api/v1/users",
         "httpPort": 8080,
         "memoryLimit": 4294967296,
@@ -36,18 +36,18 @@
           "zammad"
         ],
         "minBoxVersion": "9.1.0",
-        "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account. SMTP is auto-configured via the Cloudron sendmail addon. Additional channels can be configured from the admin panel after first login.",
+        "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account.\n\nOutbound email notifications are auto-configured to use the Cloudron SMTP relay. No additional setup is required for system notifications.\n\nFor inbound email (creating tickets from incoming mail), enable the recvmail addon in the Cloudron app's Location settings.\n\nOptional: connect an external Elasticsearch instance from Zammad admin panel (Settings > Search Index) for full-text search; PostgreSQL FTS is used by default.",
         "configurePath": "/",
         "documentationUrl": "https://github.com/exocortx/cloudron-zammad#readme",
         "iconUrl": "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/icon.png",
         "packagerName": "exocortx",
         "packagerUrl": "https://github.com/exocortx/cloudron-zammad",
-        "changelog": "* Add Cloudron sendmail addon: outbound email notifications are now auto-configured to use the Cloudron SMTP relay (no sendmail binary required).\n* Bump version to 0.2.0.",
+        "changelog": "* Idempotent SMTP channel configuration: fixes re-run on every container start without duplicating channels.\n* Use boolean true/false (not string) for enable_starttls_auto option.\n* Add recvmail hint to postInstallMessage for inbound email.\n* Add Elasticsearch hint to postInstallMessage (optional external setup).\n* Bump version to 0.3.0.",
         "mediaLinks": [
           "https://raw.githubusercontent.com/exocortx/cloudron-zammad/main/dashboard.png"
         ],
         "upstreamVersion": "7.1.2",
-        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.2.0"
+        "dockerImage": "ghcr.io/exocortx/cloudron-zammad:0.3.0"
       }
     }
   }

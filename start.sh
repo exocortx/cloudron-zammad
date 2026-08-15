@@ -33,7 +33,9 @@ export POSTGRESQL_DB_CREATE=false
 
 export REDIS_URL="${CLOUDRON_REDIS_URL}"
 
-# Elasticsearch is not packaged (yet). Zammad works without it.
+# Elasticsearch is not packaged as a Cloudron addon. Leave it disabled; the
+# user can configure an external Elasticsearch instance from Zammad's admin
+# panel (Settings > Search Index) if desired. PostgreSQL FTS is used by default.
 export ELASTICSEARCH_ENABLED=false
 
 # Avoid writing to the (read-only) log/ directory; ship logs to stdout instead.
@@ -66,32 +68,36 @@ runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rai
 # adapter 'sendmail' (active). We deactivate the sendmail one, activate the
 # SMTP one, and fill in the host/port/user/password from the sendmail addon
 # env vars. CLOUDRON_MAIL_STARTTLS_PORT is preferred when available (TLS).
+# Idempotent: re-running just overwrites the same record with the same values.
 if [ -n "${CLOUDRON_MAIL_SMTP_SERVER:-}" ]; then
     echo "==> Configuring Email::Notification outbound channel via Cloudron SMTP"
     SMTP_PORT="${CLOUDRON_MAIL_STARTTLS_PORT:-${CLOUDRON_MAIL_SMTP_PORT:-25}}"
+    # enable_starttls_auto is a boolean (true/false), not a string. Cloudron
+    # STARTTLS port is typically 587 (TLS); SMTP port 25 is plain.
+    if [ "${SMTP_PORT}" != "25" ]; then
+        STARTTLS="true"
+    else
+        STARTTLS="false"
+    fi
     runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"
         # Deactivate the sendmail channel (it's active by default but points to an unconfigured /usr/sbin/sendmail)
         Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'sendmail' } }).each { |c| c.update(active: false) }
-        # Activate and configure the SMTP channel
+        # Activate and configure the SMTP channel (one created by db/seeds/channels.rb)
         ch = Channel.where(area: 'Email::Notification', options: { outbound: { adapter: 'smtp' } }).first
         if ch
           ch.options['outbound']['options']['host']     = '${CLOUDRON_MAIL_SMTP_SERVER}'
           ch.options['outbound']['options']['port']     = ${SMTP_PORT}
           ch.options['outbound']['options']['user']     = '${CLOUDRON_MAIL_SMTP_USERNAME}'
           ch.options['outbound']['options']['password'] = '${CLOUDRON_MAIL_SMTP_PASSWORD}'
-          # Use STARTTLS for the dedicated STARTTLS port (587); plain otherwise.
-          ch.options['outbound']['options']['enable_starttls_auto'] = ${SMTP_PORT} != 25 ? 'true' : 'false'
+          ch.options['outbound']['options']['enable_starttls_auto'] = ${STARTTLS}
           ch.options['outbound']['options']['ssl_verify'] = true
           ch.active = true
           ch.preferences['online_service_disable'] = false
           ch.save!
+          puts 'Email::Notification SMTP channel configured: ' + ch.options['outbound']['options']['host'].to_s + ':' + ch.options['outbound']['options']['port'].to_s
+        else
+          puts 'WARNING: no SMTP Email::Notification channel found; outbound email will not work'
         end
-        # Set the sender address used for outgoing notifications
-        if '${CLOUDRON_MAIL_FROM:-}'
-          Setting.set('product_name', 'Zammad')
-          # notification_sender is the From: address; falls back to the channel's configured identity
-        end
-        puts 'Email::Notification channel configured for Cloudron SMTP.'
     \""
 fi
 

@@ -4,7 +4,7 @@
     "author": "Zammad Foundation",
     "description": "file://DESCRIPTION.md",
     "tagline": "Open-source ticketing and customer support platform",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "website": "https://zammad.org",
     "contactEmail": "contact@zammad.org",
     "icon": "file://icon.png",
