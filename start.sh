@@ -1,57 +1,64 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/bash
+#
+# Cloudron entrypoint for Zammad. Runs as root. Maps Cloudron addon environment
+# variables to the ones expected by the official Zammad docker-entrypoint,
+# prepares the few writable runtime paths needed under Cloudron's read-only
+# filesystem, runs the (idempotent) zammad-init step synchronously, then hands
+# off to supervisord which runs the long-running processes as the non-root
+# "zammad" user (uid/gid 1000, baked into the upstream image).
+#
+# Adapted from jojojo/cloudron-zammad (https://github.com/jojojo/cloudron-zammad)
 
-# Cloudron env vars
-DB_HOST="${CLOUDRON_POSTGRESQL_HOST}"
-DB_PORT="${CLOUDRON_POSTGRESQL_PORT}"
-DB_USER="${CLOUDRON_POSTGRESQL_USERNAME}"
-DB_PASS="${CLOUDRON_POSTGRESQL_PASSWORD}"
-DB_NAME="${CLOUDRON_POSTGRESQL_DATABASE}"
-REDIS_HOST="${CLOUDRON_REDIS_HOST}"
-REDIS_PORT="${CLOUDRON_REDIS_PORT}"
-REDIS_PASSWORD="${CLOUDRON_REDIS_PASSWORD}"
-DOMAIN="${CLOUDRON_APP_DOMAIN}"
+set -eu
 
-# PG proxy target — socat runs under supervisord and forwards localhost:5432 → this.
-# The pg gem's source IP (the docker bridge gateway) is rejected by Cloudron's
-# pg_hba.conf, but connections from 127.0.0.1 are always accepted (trust on localhost).
-export PG_PROXY_TARGET="${DB_HOST}:${DB_PORT}"
+echo "==> Preparing writable runtime directories"
+mkdir -p /run/zammad-tmp /run/nginx/body /run/nginx/proxy /run/nginx/fastcgi /run/nginx/scgi /run/nginx/uwsgi /run/nginx/conf.d /run/nginx/sites-enabled
+chown -R zammad:zammad /run/zammad-tmp /run/nginx
 
-# Configure Zammad to use Cloudron addons via the local forwarder
-export POSTGRESQL_HOST="127.0.0.1"
-export POSTGRESQL_PORT="5432"
-export POSTGRESQL_USER="$DB_USER"
-export POSTGRESQL_PASS="$DB_PASS"
-export POSTGRESQL_DB="$DB_NAME"
-# SSL is not required for Cloudron PostgreSQL addon — pg_hba.conf allows plain IPv4
-# from the docker bridge. Disable SSL explicitly to avoid TLS handshake failures.
-export PGSSLMODE="disable"
-# Redis with password (Cloudron Redis addon requires auth)
-export REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
-export MEMCACHE_SERVERS="127.0.0.1:11211"
-export NGINX_PORT=8080
-export NGINX_SERVER_NAME="${DOMAIN}"
-export NGINX_SERVER_SCHEME="https"
-export RAILS_TRUSTED_PROXIES="127.0.0.1,::1"
-export ZAMMAD_FQDN="${DOMAIN}"
-export ZAMMAD_HTTP_TYPE="https"
-export ZAMMAD_RAILSSERVER_HOST=127.0.0.1
-export ZAMMAD_RAILSSERVER_PORT=3000
-export ZAMMAD_WEBSOCKET_HOST=127.0.0.1
-export ZAMMAD_WEBSOCKET_PORT=6042
+mkdir -p /app/data/storage
+chown -R zammad:zammad /app/data
+
+echo "==> Mapping Cloudron environment variables to Zammad"
+export POSTGRESQL_HOST="${CLOUDRON_POSTGRESQL_HOST}"
+export POSTGRESQL_PORT="${CLOUDRON_POSTGRESQL_PORT}"
+export POSTGRESQL_DB="${CLOUDRON_POSTGRESQL_DATABASE}"
+export POSTGRESQL_USER="${CLOUDRON_POSTGRESQL_USERNAME}"
+export POSTGRESQL_PASS="${CLOUDRON_POSTGRESQL_PASSWORD}"
+# The Cloudron PostgreSQL addon already pre-creates the app's database and
+# restricts pg_hba.conf to it (no access to the "postgres" maintenance
+# database). "rake db:create" would try to connect to that "postgres" admin
+# database and fail with "no pg_hba.conf entry ... database postgres", so we
+# must skip it and go straight to db:migrate/db:seed.
+export POSTGRESQL_DB_CREATE=false
+
+export REDIS_URL="${CLOUDRON_REDIS_URL}"
+
+# Elasticsearch is not packaged (yet). Zammad works without it.
 export ELASTICSEARCH_ENABLED=false
 
-# Persistent storage — bind mount instead of symlink (filesystem is read-only)
-# Cloudron mounts /app/data, Zammad stores data in /opt/zammad/storage
-mkdir -p /app/data/storage /app/data/tmp /app/data/log
+# Avoid writing to the (read-only) log/ directory; ship logs to stdout instead.
+export RAILS_LOG_TO_STDOUT=true
 
-if [ ! -e /opt/zammad/storage ]; then
-    ln -s /app/data/storage /opt/zammad/storage 2>/dev/null || true
-fi
+# Trust Cloudron's reverse proxy so X-Forwarded-* headers are honored.
+export RAILS_TRUSTED_PROXIES="127.0.0.1,::1${CLOUDRON_PROXY_IP:+,${CLOUDRON_PROXY_IP}}"
 
-cd /opt/zammad
+export ZAMMAD_FQDN="${CLOUDRON_APP_DOMAIN}"
+export ZAMMAD_HTTP_TYPE="https"
 
-# Run supervisord as PID 1 (required for proper signal handling in containers).
-# Supervisord manages: socat pg-proxy, memcached, zammad services.
-# The zammad-init program runs once on first boot to create DB / migrate / seed.
-exec /usr/bin/supervisord --configuration /etc/supervisor/supervisord.conf -n
+# All Zammad processes run inside this single container (not as separate
+# docker-compose services), so nginx must reach railsserver/websocket on
+# localhost rather than via their upstream service names.
+export ZAMMAD_RAILSSERVER_HOST=127.0.0.1
+export ZAMMAD_WEBSOCKET_HOST=127.0.0.1
+
+echo "==> Running zammad-init (migrations / seed)"
+runuser -p -u zammad -- env HOME=/tmp /opt/zammad/bin/docker-entrypoint zammad-init
+
+# ZAMMAD_FQDN / ZAMMAD_HTTP_TYPE are only applied by Zammad's own db/seeds.rb on
+# the very first install. Re-apply them on every start so a Cloudron domain
+# change is picked up.
+echo "==> Applying FQDN / http_type settings"
+runuser -p -u zammad -- env HOME=/tmp bash -c "cd /opt/zammad && bundle exec rails r \"Setting.set('fqdn', '${ZAMMAD_FQDN}'); Setting.set('http_type', '${ZAMMAD_HTTP_TYPE}')\""
+
+echo "==> Starting supervisord"
+exec /usr/bin/supervisord -n -c /etc/supervisor/supervisord.conf
