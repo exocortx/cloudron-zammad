@@ -12,16 +12,10 @@ REDIS_PORT="${CLOUDRON_REDIS_PORT}"
 REDIS_PASSWORD="${CLOUDRON_REDIS_PASSWORD}"
 DOMAIN="${CLOUDRON_APP_DOMAIN}"
 
-# Start a TCP forwarder on 127.0.0.1:5432 → $DB_HOST:$DB_PORT via socat.
-# This solves the Cloudron PostgreSQL pg_hba.conf / IPv6 source IP issue:
-#   - Cloudron DNS returns both A and AAAA records for the postgres service.
-#   - Ruby's pg gem prefers IPv6, but pg_hba.conf only authorises the IPv4
-#     docker bridge addresses — or only localhost.
-#   - By proxying through 127.0.0.1, Zammad connects "from localhost" which
-#     PostgreSQL always accepts (trust/local auth in pg_hba.conf).
-socat TCP-LISTEN:5432,reuseaddr,fork,bind=127.0.0.1 TCP:${DB_HOST}:${DB_PORT} &
-SOCAT_PID=$!
-trap "kill $SOCAT_PID 2>/dev/null || true" EXIT
+# PG proxy target — socat runs under supervisord and forwards localhost:5432 → this.
+# The pg gem's source IP (the docker bridge gateway) is rejected by Cloudron's
+# pg_hba.conf, but connections from 127.0.0.1 are always accepted (trust on localhost).
+export PG_PROXY_TARGET="${DB_HOST}:${DB_PORT}"
 
 # Configure Zammad to use Cloudron addons via the local forwarder
 export POSTGRESQL_HOST="127.0.0.1"
@@ -57,31 +51,7 @@ fi
 
 cd /opt/zammad
 
-# First boot: init Zammad (create DB, migrate, seed, configure FQDN)
-if [ ! -f /app/data/.initialized ]; then
-    echo "First boot: initialising Zammad database..."
-
-    # Wait for postgres to be ready (via local forwarder)
-    until pg_isready -q -h 127.0.0.1 -p 5432; do
-        echo "  waiting for postgresql..."
-        sleep 2
-    done
-
-    # Wait for redis (TCP connectivity check; auth handled by REDIS_URL env var)
-    echo "  waiting for redis..."
-    until (echo > /dev/tcp/"$REDIS_HOST"/"$REDIS_PORT") 2>/dev/null; do
-        sleep 2
-    done
-    echo "  redis is reachable"
-
-    # Run zammad-init (handles DB creation, migrations, seeds)
-    /opt/zammad/bin/docker-entrypoint zammad-init
-
-    # Set FQDN
-    bundle exec rails r "Setting.set('fqdn', '${DOMAIN}')" 2>&1 || true
-
-    touch /app/data/.initialized
-fi
-
-# Run supervisord (memcached + zammad services)
+# Run supervisord as PID 1 (required for proper signal handling in containers).
+# Supervisord manages: socat pg-proxy, memcached, zammad services.
+# The zammad-init program runs once on first boot to create DB / migrate / seed.
 exec /usr/bin/supervisord --configuration /etc/supervisor/supervisord.conf -n

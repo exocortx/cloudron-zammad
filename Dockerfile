@@ -17,9 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Configure supervisord to run railsserver, websocket, scheduler, memcached, nginx
 COPY supervisord.conf /etc/supervisor/supervisord.conf
 
-# Cloudron start script
+# Cloudron start script + zammad-init wrapper
 COPY start.sh /app/code/start.sh
-RUN chmod +x /app/code/start.sh
+COPY zammad-init-wrapper.sh /app/code/zammad-init-wrapper.sh
+RUN chmod +x /app/code/start.sh /app/code/zammad-init-wrapper.sh
 
 # Persist Zammad data
 VOLUME ["/opt/zammad/storage"]
