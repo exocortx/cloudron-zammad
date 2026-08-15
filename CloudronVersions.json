@@ -2,48 +2,46 @@
   "stable": true,
   "versions": {
     "0.1.0": {
-      "creationDate": "Fri, 15 Aug 2026 12:00:00 GMT",
-      "ts": "Fri, 15 Aug 2026 12:00:00 GMT",
-      "publishState": "published",
       "manifest": {
         "id": "org.zammad.cloudronapp",
         "manifestVersion": 2,
         "title": "Zammad Helpdesk",
         "tagline": "Open-source ticketing & customer support platform",
-        "author": "Zammad Foundation",
-        "description": "file://DESCRIPTION.md",
-        "changelog": "* Initial release of Zammad 7.1.2 for Cloudron\n* Multi-channel support (email, web, chat, social)\n* PostgreSQL 16 via Cloudron addon\n* Redis 7 via Cloudron addon\n* Memcached bundled for session/cache\n* Elasticsearch disabled (PostgreSQL FTS used)\n",
-        "version": "0.1.0",
-        "website": "https://zammad.org",
-        "packageUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
+        "author": "Olivier Meunier <olivier@readeck.com>",
+        "packagerName": "fengchang",
+        "packagerUrl": "https://github.com/Arkad-Agency/cloudron-zammad",
         "contactEmail": "contact@zammad.org",
-        "icon": "file://icon.png",
+        "website": "https://github.com/fengchang/readeck-cloudron",
+        "version": "0.1.0",
+        "description": "# Readeck for Cloudron\n\nReadeck is a self-hosted read-later and web archiving application. Save a link and\nReadeck fetches the page, strips the navigation, ads and cookie banners, and keeps a\nclean copy of the article \u2014 text and images \u2014 in its own archive. The saved copy\nstays readable even after the original goes behind a paywall, changes, or disappears.\n\nThis is an unofficial [Cloudron](https://cloudron.io) community package for\n[Readeck](https://readeck.org). The package version and the Readeck version are \nindependent \u2014 see `CHANGELOG`.\n\n## What it does\n\n* **Article extraction** \u2014 pages are reduced to readable text with the images kept,\n  stored as a self-contained archive per bookmark.\n* **Full-text search** \u2014 searches the article body, not just titles and URLs, using\n  SQLite FTS5 built into the application. No separate search engine to run or\n  forget to configure.\n* **Labels and collections** \u2014 organise bookmarks by label, or define collections as\n  saved filters that update themselves.\n* **Highlights and annotations** \u2014 mark passages and attach notes as you read.\n* **E-reader delivery** \u2014 send any article to a Kindle or Kobo as EPUB, or download\n  the EPUB directly.\n* **Videos and pictures** \u2014 bookmarks are also handled for video pages and image\n  posts, not only articles.\n* **Import** \u2014 bring in existing bookmarks from Pocket, Wallabag, Instapaper,\n  Omnivore, Zotero, Linkding, CSV or plain text.\n* **Browser extensions and mobile apps** \u2014 official Firefox and Chrome extensions,\n  plus iOS and Android applications, all connect to this instance.\n* **API** \u2014 a documented REST API with per-application tokens, available in-app\n  under Profile.\n\n## First login\n\nUsername `admin`, password `changeme`, as stated in the post-install message.\nChange it immediately under Profile \u2192 Password.\n\nThe initial user is created only on first run, guarded by `/app/data/.initialized`.\nThat guard is load-bearing: `readeck user` updates an existing user rather than\nfailing, so without it every restart would silently reset the admin password back to\nthe packaged default.\n\n## Authentication\n\nThis package uses Readeck's own user management. **Cloudron SSO (OIDC/LDAP) is not\navailable**. Readeck does ship multi-factor authentication, enabled per user under \nProfile.\n\n## Storage\n\nEverything Readeck writes \u2014 the database, the article archives, the extraction\nscripts \u2014 lives under the app's data directory, so Cloudron's backups cover the full\ninstallation with no extra configuration. The database is SQLite; there is no\nexternal database to provision.\n\n## Email\n\nPassword recovery and share-by-email are wired to Cloudron's `sendmail` addon.\nShare-by-email is what delivers an article to a Kindle or Kobo as EPUB \u2014 without mail\nconfigured, that option disappears from the UI and the route returns 403. \n\n---\n\n## Licence\n\nReadeck is free software under the AGPL-3.0. This Cloudron package is an unofficial\ncommunity package with no affiliation to the Readeck project.\n",
+        "changelog": "* Initial package of Readeck 0.22.3\n* Article extraction, full-text search, labels, collections and annotations\n* Password recovery and share-by-email via Cloudron's mail service\n",
+        "icon": "file://logo.png",
         "tags": [
-          "helpdesk",
-          "ticketing",
-          "customer-support",
-          "zammad"
+          "bookmarks",
+          "read-later",
+          "archiving",
+          "productivity",
+          "reading"
         ],
-        "httpPort": 8080,
-        "healthCheckPath": "/api/v1/users",
-        "memoryLimit": 4294967296,
-        "minBoxVersion": "8.0.0",
-        "upstreamVersion": "7.1.2",
+        "httpPort": 8000,
+        "healthCheckPath": "/login",
+        "memoryLimit": 536870912,
+        "minBoxVersion": "9.1.0",
         "addons": {
-          "postgresql": {
-            "version": "16"
-          },
-          "redis": {
-            "version": "7.0"
-          },
-          "localstorage": {}
+          "localstorage": {},
+          "sendmail": {}
         },
-        "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account. SMTP and other integrations can be configured from the admin panel after first login.",
-        "iconUrl": "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png",
+        "postInstallMessage": "Readeck is ready.\n\nLog in with:\n\n* Username: **admin**\n* Password: **changeme**\n\n**Change this password immediately** under Profile -> Password.\n\nReadeck has no OIDC or LDAP support upstream, so Cloudron SSO does not apply here and this app uses Readeck's own user management. Enable multi-factor authentication under Profile for stronger protection, and add any further users under Administration -> Users.\n\nPassword recovery and share-by-email are wired to Cloudron's mail service.",
+        "iconUrl": "https://raw.githubusercontent.com/fengchang/readeck-cloudron/main/logo.png",
         "mediaLinks": [
-          "https://raw.githubusercontent.com/Arkad-Agency/cloudron-zammad/main/icon.png"
-        ]
-      }
+          "https://raw.githubusercontent.com/fengchang/readeck-cloudron/main/logo.png"
+        ],
+        "dockerImage": "ghcr.io/fengchang/readeck-cloudron:20260814-120544-8767022cb",
+        "packageUrl": "https://github.com/Arkad-Agency/cloudron-zammad"
+      },
+      "creationDate": "Fri, 14 Aug 2026 12:06:26 GMT",
+      "ts": "Fri, 14 Aug 2026 12:06:26 GMT",
+      "publishState": "published"
     }
   }
 }
