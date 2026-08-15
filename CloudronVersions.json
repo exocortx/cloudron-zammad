@@ -34,7 +34,7 @@
           "customer-support",
           "zammad"
         ],
-        "minBoxVersion": "8.0.0",
+        "minBoxVersion": "9.1.0",
         "postInstallMessage": "Zammad is ready. Open the app URL, complete the first-time setup wizard, and create your admin account. SMTP and other integrations can be configured from the admin panel after first login.",
         "configurePath": "/",
         "documentationUrl": "https://github.com/exocortx/cloudron-zammad#readme",
